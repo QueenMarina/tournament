@@ -1,8 +1,6 @@
 import { createInitialState } from "./tournamentLogic";
 import type { TournamentState } from "./types";
 
-const STORAGE_KEY = "minecraft-tournament-bracket-v1";
-
 function isTournamentState(value: unknown): value is TournamentState {
   return Boolean(
     value &&
@@ -14,19 +12,16 @@ function isTournamentState(value: unknown): value is TournamentState {
   );
 }
 
-export function loadTournamentState(): TournamentState {
+export async function loadTournamentState(): Promise<TournamentState> {
   const fallback = createInitialState();
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return fallback;
-    }
-
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isTournamentState(parsed)) {
-      return fallback;
-    }
+    const res = await fetch("/api/state");
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    if (!data.state) return fallback;
+    const parsed = data.state as unknown;
+    if (!isTournamentState(parsed)) return fallback;
 
     return {
       ...fallback,
@@ -41,11 +36,21 @@ export function loadTournamentState(): TournamentState {
   }
 }
 
-export function saveTournamentState(state: TournamentState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+export async function saveTournamentState(
+  state: TournamentState,
+  token: string | null,
+): Promise<void> {
+  if (!token) return;
+  await fetch("/api/state", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(state),
+  });
 }
 
 export function resetTournamentState(): TournamentState {
-  localStorage.removeItem(STORAGE_KEY);
   return createInitialState();
 }

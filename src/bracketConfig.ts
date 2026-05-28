@@ -60,7 +60,7 @@ export const MATCHES: MatchDefinition[] = [
 
   { id: "l3", label: "L1", sideAId: "lb-r2-a", sideBId: "lb-r2-b", outputNodeId: "lb-r3-a", advanceCount: 3, recruitLimit: 1 },
   { id: "l4", label: "L2", sideAId: "lb-r2-c", sideBId: "lb-r2-d", outputNodeId: "lb-r3-b", advanceCount: 3, recruitLimit: 1 },
-  { id: "l5", label: "L3", sideAId: "lb-r3-a", sideBId: "lb-r3-b", outputNodeId: "lb-r4-b", advanceCount: 4, recruitLimit: 0 },
+  { id: "l5", label: "L3", sideAId: "lb-r3-a", sideBId: "lb-r3-b", outputNodeId: "lb-r4-b", advanceCount: 4, recruitLimit: 1 },
   { id: "l6", label: "L4", sideAId: "lb-r4-a", sideBId: "lb-r4-b", outputNodeId: "lb-finalist", advanceCount: 4, recruitLimit: 0 },
 
   { id: "gf", label: "GF", sideAId: "wb-finalist", sideBId: "lb-finalist", outputNodeId: "champion", advanceCount: 4, recruitLimit: 0 },

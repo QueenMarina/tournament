@@ -218,7 +218,7 @@ button:disabled {
   grid-template-columns: 28px minmax(0, 1fr) 94px 34px;
   align-items: center;
   gap: 8px;
-  min-height: 48px;
+  min-height: 60px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.045);
@@ -244,7 +244,6 @@ button:disabled {
 }
 
 .team-dot {
-  position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
   border-radius: 7px 0 0 7px;
@@ -723,6 +722,96 @@ button:disabled {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+.admin-bar {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 10;
+}
+
+.admin-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  background: #18212e;
+  color: #edf5fa;
+  padding: 0 14px;
+  font-weight: 600;
+}
+
+.admin-button:hover {
+  filter: brightness(1.12);
+}
+
+.admin-button--active {
+  border-color: rgba(91, 209, 123, 0.5);
+  background: rgba(91, 209, 123, 0.18);
+  color: #adf0c1;
+}
+
+.admin-bar {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 10;
+}
+
+.admin-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  background: #18212e;
+  color: #edf5fa;
+  padding: 0 14px;
+  font-weight: 600;
+}
+
+.admin-button:hover {
+  filter: brightness(1.12);
+}
+
+.admin-button--active {
+  border-color: rgba(91, 209, 123, 0.5);
+  background: rgba(91, 209, 123, 0.18);
+  color: #adf0c1;
+}
+
+.admin-bar {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 10;
+}
+
+.admin-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  background: #18212e;
+  color: #edf5fa;
+  padding: 0 14px;
+  font-weight: 600;
+}
+
+.admin-button:hover {
+  filter: brightness(1.12);
+}
+
+.admin-button--active {
+  border-color: rgba(91, 209, 123, 0.5);
+  background: rgba(91, 209, 123, 0.18);
+  color: #adf0c1;
 }
 
 @media (max-width: 1180px) {

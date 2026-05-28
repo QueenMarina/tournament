@@ -3,8 +3,11 @@ import {
   Download,
   Edit3,
   FileImage,
+  Lock,
+  LogOut,
   Plus,
   RotateCcw,
+  Shield,
   Swords,
   Trash2,
   Trophy,
@@ -12,7 +15,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BRACKET_NODES,
   CANVAS_HEIGHT,
@@ -46,6 +49,7 @@ import type {
 } from "./types";
 
 const BRACKET_BACKGROUND = "/bracket-reference.png";
+const POLL_INTERVAL = 5000;
 type ResetMode = "bracket" | "all";
 
 function minecraftAvatarUrl(username: string): string {
@@ -110,10 +114,12 @@ function EmptySlot() {
 function BracketNode({
   node,
   state,
+  isAdmin,
   onEdit,
 }: {
   node: BracketNodeDefinition;
   state: TournamentState;
+  isAdmin: boolean;
   onEdit: (nodeId: string) => void;
 }) {
   const assignment = state.nodes[node.id];
@@ -128,9 +134,9 @@ function BracketNode({
         borderColor: assignment.color,
         "--node-color": assignment.color,
       } as React.CSSProperties}
-      onClick={() => onEdit(node.id)}
+      onClick={() => isAdmin && onEdit(node.id)}
       type="button"
-      aria-label={`Edit ${node.label}`}
+      aria-label={isAdmin ? `Edit ${node.label}` : node.label}
     >
       <span className="bracket-node__label">{node.label}</span>
       <span className="bracket-node__slots">
@@ -148,10 +154,12 @@ function BracketNode({
 
 function RosterPanel({
   state,
+  isAdmin,
   setState,
   setMessage,
 }: {
   state: TournamentState;
+  isAdmin: boolean;
   setState: (state: TournamentState) => void;
   setMessage: (message: string) => void;
 }) {
@@ -176,6 +184,7 @@ function RosterPanel({
 
   function addPlayer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isAdmin) return;
     const trimmed = username.trim();
 
     if (!trimmed) {
@@ -203,6 +212,7 @@ function RosterPanel({
 
   function bulkAddPlayers(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isAdmin) return;
     const usernames = bulkUsernames
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -260,6 +270,7 @@ function RosterPanel({
   }
 
   function changePlayerTeam(playerId: string, nextTeamId: string) {
+    if (!isAdmin) return;
     const result = movePlayerToTeam(state, playerId, nextTeamId);
     if (!result.ok || !result.value) {
       setMessage(result.error ?? "Could not move player.");
@@ -277,37 +288,41 @@ function RosterPanel({
           <Users size={18} />
           <h2>Roster</h2>
         </div>
-        <form className="add-player-form" onSubmit={addPlayer}>
-          <input
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="Minecraft username"
-            autoComplete="off"
-          />
-          <select value={teamId} onChange={(event) => setTeamId(event.target.value)}>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-          <button className="primary-button" type="submit">
-            <Plus size={16} />
-            Add
-          </button>
-        </form>
-        <form className="bulk-player-form" onSubmit={bulkAddPlayers}>
-          <textarea
-            value={bulkUsernames}
-            onChange={(event) => setBulkUsernames(event.target.value)}
-            placeholder="One username per line"
-            rows={5}
-          />
-          <button type="submit">
-            <Upload size={16} />
-            Bulk Add
-          </button>
-        </form>
+        {isAdmin ? (
+          <>
+            <form className="add-player-form" onSubmit={addPlayer}>
+              <input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Minecraft username"
+                autoComplete="off"
+              />
+              <select value={teamId} onChange={(event) => setTeamId(event.target.value)}>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+              <button className="primary-button" type="submit">
+                <Plus size={16} />
+                Add
+              </button>
+            </form>
+            <form className="bulk-player-form" onSubmit={bulkAddPlayers}>
+              <textarea
+                value={bulkUsernames}
+                onChange={(event) => setBulkUsernames(event.target.value)}
+                placeholder="One username per line"
+                rows={5}
+              />
+              <button type="submit">
+                <Upload size={16} />
+                Bulk Add
+              </button>
+            </form>
+          </>
+        ) : null}
         <div className="roster-counts">
           <span>{counts.active} active</span>
           <span>{counts.queued} queued</span>
@@ -326,25 +341,31 @@ function RosterPanel({
                 <strong>{player.username}</strong>
                 <span className={`status-pill status-pill--${player.status}`}>{player.status}</span>
               </div>
-              <select value={player.initialTeamId} onChange={(event) => changePlayerTeam(player.id, event.target.value)}>
-                {teams.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                className="icon-button"
-                type="button"
-                title={`Remove ${player.username}`}
-                onClick={() => {
-                  setState(deletePlayer(state, player.id));
-                  setMessage(`${player.username} removed.`);
-                }}
-              >
-                <Trash2 size={16} />
-              </button>
-              <span className="team-dot" style={{ background: team?.color ?? "#8792a8" }} />
+              {isAdmin ? (
+                <>
+                  <select value={player.initialTeamId} onChange={(event) => changePlayerTeam(player.id, event.target.value)}>
+                    {teams.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    title={`Remove ${player.username}`}
+                    onClick={() => {
+                      setState(deletePlayer(state, player.id));
+                      setMessage(`${player.username} removed.`);
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </>
+              ) : (
+                <span className="team-dot" style={{ background: team?.color ?? "#8792a8" }} />
+              )}
+              {isAdmin && <span className="team-dot" style={{ background: team?.color ?? "#8792a8" }} />}
             </div>
           );
         })}
@@ -355,12 +376,14 @@ function RosterPanel({
 
 function TeamsAndBackupPanel({
   state,
+  isAdmin,
   setState,
   setMessage,
   onOpenMatch,
   onRequestReset,
 }: {
   state: TournamentState;
+  isAdmin: boolean;
   setState: (state: TournamentState) => void;
   setMessage: (message: string) => void;
   onOpenMatch: (matchId: string) => void;
@@ -381,6 +404,7 @@ function TeamsAndBackupPanel({
   }
 
   function importJson(file: File) {
+    if (!isAdmin) return;
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -431,15 +455,24 @@ function TeamsAndBackupPanel({
         <div className="team-list">
           {teams.map((team) => (
             <label className="team-editor" key={team.id}>
-              <input
-                type="color"
-                value={team.color}
-                onChange={(event) => setState(updateTeam(state, { ...team, color: event.target.value }))}
-              />
-              <input
-                value={team.name}
-                onChange={(event) => setState(updateTeam(state, { ...team, name: event.target.value }))}
-              />
+              {isAdmin ? (
+                <>
+                  <input
+                    type="color"
+                    value={team.color}
+                    onChange={(event) => setState(updateTeam(state, { ...team, color: event.target.value }))}
+                  />
+                  <input
+                    value={team.name}
+                    onChange={(event) => setState(updateTeam(state, { ...team, name: event.target.value }))}
+                  />
+                </>
+              ) : (
+                <>
+                  <span className="team-dot" style={{ background: team.color, width: 38, height: 38, borderRadius: 7, display: "inline-block" }} />
+                  <span style={{ display: "flex", alignItems: "center", paddingLeft: 8 }}>{team.name}</span>
+                </>
+              )}
             </label>
           ))}
         </div>
@@ -459,8 +492,10 @@ function TeamsAndBackupPanel({
               <button
                 className={`match-row ${completed ? "match-row--complete" : ""}`}
                 key={match.id}
-                onClick={() => onOpenMatch(match.id)}
+                onClick={() => isAdmin && onOpenMatch(match.id)}
                 type="button"
+                disabled={!isAdmin}
+                style={!isAdmin ? { cursor: "default", opacity: 1 } : undefined}
               >
                 <span>{match.label}</span>
                 <small>
@@ -487,18 +522,22 @@ function TeamsAndBackupPanel({
             <FileImage size={16} />
             {exportingImage ? "Rendering" : "Image"}
           </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={16} />
-            Import
-          </button>
-          <button type="button" onClick={() => onRequestReset("bracket")}>
-            <RotateCcw size={16} />
-            Bracket
-          </button>
-          <button type="button" onClick={() => onRequestReset("all")}>
-            <RotateCcw size={16} />
-            All
-          </button>
+          {isAdmin && (
+            <>
+              <button type="button" onClick={() => fileInputRef.current?.click()}>
+                <Upload size={16} />
+                Import
+              </button>
+              <button type="button" onClick={() => onRequestReset("bracket")}>
+                <RotateCcw size={16} />
+                Bracket
+              </button>
+              <button type="button" onClick={() => onRequestReset("all")}>
+                <RotateCcw size={16} />
+                All
+              </button>
+            </>
+          )}
         </div>
         <input
           ref={fileInputRef}
@@ -558,12 +597,83 @@ function ConfirmResetModal({
   );
 }
 
+function AdminLoginModal({
+  onLogin,
+  onClose,
+}: {
+  onLogin: (password: string) => void;
+  onClose: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        onLogin(password);
+      } else {
+        setError("Wrong password.");
+      }
+    } catch {
+      setError("Could not reach server.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal modal--confirm">
+        <header className="modal-header">
+          <div>
+            <h2>Admin Login</h2>
+            <p>Enter the admin password to edit the bracket.</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} title="Close">
+            <X size={18} />
+          </button>
+        </header>
+        <form onSubmit={submit} style={{ padding: 18, display: "grid", gap: 10 }}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            autoFocus
+          />
+          {error && <p className="modal-error" style={{ margin: 0 }}>{error}</p>}
+          <footer className="modal-actions" style={{ padding: 0, borderTop: 0 }}>
+            <button type="button" onClick={onClose}>
+              Cancel
+            </button>
+            <button className="primary-button" type="submit" disabled={loading}>
+              <Lock size={16} />
+              {loading ? "Checking..." : "Login"}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function BracketBoard({
   state,
+  isAdmin,
   onOpenMatch,
   onEditNode,
 }: {
   state: TournamentState;
+  isAdmin: boolean;
   onOpenMatch: (matchId: string) => void;
   onEditNode: (nodeId: string) => void;
 }) {
@@ -573,7 +683,7 @@ function BracketBoard({
         <div className="bracket-board" aria-label="Tournament bracket">
           <img className="bracket-background" src={BRACKET_BACKGROUND} alt="" />
           {BRACKET_NODES.map((node) => (
-            <BracketNode key={node.id} node={node} state={state} onEdit={onEditNode} />
+            <BracketNode key={node.id} node={node} state={state} isAdmin={isAdmin} onEdit={onEditNode} />
           ))}
           {MATCHES.map((match) => {
             const point = MATCH_HOTSPOTS[match.id];
@@ -586,9 +696,9 @@ function BracketBoard({
                 key={match.id}
                 className={`match-hotspot ${completed ? "match-hotspot--complete" : ""}`}
                 style={hotspotStyle(point)}
-                onClick={() => onOpenMatch(match.id)}
+                onClick={() => isAdmin && onOpenMatch(match.id)}
                 type="button"
-                title={`Resolve ${match.label}`}
+                title={isAdmin ? `Resolve ${match.label}` : match.label}
               >
                 {completed ? <Check size={14} /> : <Swords size={14} />}
                 <span>{match.label}</span>
@@ -887,15 +997,50 @@ function NodeEditorModal({
 }
 
 export function App() {
-  const [state, setState] = useState<TournamentState>(() => loadTournamentState());
+  const [state, setStateRaw] = useState<TournamentState>(() => createInitialState());
   const [message, setMessage] = useState("");
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState<ResetMode | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const isAdminRef = useRef(isAdmin);
+  isAdminRef.current = isAdmin;
 
   useEffect(() => {
-    saveTournamentState(state);
-  }, [state]);
+    loadTournamentState().then((s) => {
+      setStateRaw(s);
+      setLoaded(true);
+    });
+  }, []);
+
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (isAdmin) {
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = null;
+      return;
+    }
+    pollRef.current = setInterval(async () => {
+      const s = await loadTournamentState();
+      setStateRaw(s);
+    }, POLL_INTERVAL);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [isAdmin]);
+
+  const setState = useCallback(
+    (next: TournamentState) => {
+      setStateRaw(next);
+      if (adminToken) {
+        saveTournamentState(next, adminToken);
+      }
+    },
+    [adminToken],
+  );
 
   useEffect(() => {
     if (!message) {
@@ -930,16 +1075,57 @@ export function App() {
       return;
     }
 
-    setState(resetTournamentState());
+    const fresh = resetTournamentState();
+    setStateRaw(fresh);
+    saveTournamentState(fresh, adminToken);
     setMessage("Tournament reset.");
+  }
+
+  function handleLogin(password: string) {
+    setAdminToken(password);
+    setIsAdmin(true);
+    setShowLogin(false);
+    setMessage("Admin mode enabled.");
+  }
+
+  function handleLogout() {
+    setAdminToken(null);
+    setIsAdmin(false);
+    setActiveMatchId(null);
+    setEditingNodeId(null);
+    setMessage("Logged out.");
+  }
+
+  if (!loaded) {
+    return (
+      <div className="app-shell" style={{ display: "grid", placeItems: "center" }}>
+        <p style={{ color: "#8795a5" }}>Loading...</p>
+      </div>
+    );
   }
 
   return (
     <div className="app-shell">
-      <RosterPanel state={state} setState={setState} setMessage={setMessage} />
-      <BracketBoard state={state} onOpenMatch={setActiveMatchId} onEditNode={setEditingNodeId} />
+      <div className="admin-bar">
+        {isAdmin ? (
+          <button className="admin-button admin-button--active" type="button" onClick={handleLogout}>
+            <Shield size={16} />
+            Admin
+            <LogOut size={14} />
+          </button>
+        ) : (
+          <button className="admin-button" type="button" onClick={() => setShowLogin(true)}>
+            <Lock size={16} />
+            Admin Login
+          </button>
+        )}
+      </div>
+
+      <RosterPanel state={state} isAdmin={isAdmin} setState={setState} setMessage={setMessage} />
+      <BracketBoard state={state} isAdmin={isAdmin} onOpenMatch={setActiveMatchId} onEditNode={setEditingNodeId} />
       <TeamsAndBackupPanel
         state={state}
+        isAdmin={isAdmin}
         setState={setState}
         setMessage={setMessage}
         onOpenMatch={setActiveMatchId}
@@ -947,6 +1133,7 @@ export function App() {
       />
 
       {message && <div className="toast">{message}</div>}
+      {showLogin && <AdminLoginModal onLogin={handleLogin} onClose={() => setShowLogin(false)} />}
       {resetMode && (
         <ConfirmResetModal
           mode={resetMode}
@@ -954,10 +1141,10 @@ export function App() {
           onConfirm={() => applyReset(resetMode)}
         />
       )}
-      {activeMatch && (
+      {activeMatch && isAdmin && (
         <MatchModal match={activeMatch} state={state} onApply={applyState} onClose={() => setActiveMatchId(null)} />
       )}
-      {editingNode && (
+      {editingNode && isAdmin && (
         <NodeEditorModal node={editingNode} state={state} onApply={applyState} onClose={() => setEditingNodeId(null)} />
       )}
     </div>
