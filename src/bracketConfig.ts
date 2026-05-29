@@ -32,8 +32,8 @@ export const BRACKET_NODES: BracketNodeDefinition[] = [
   { id: "wb-r3-b", label: "WB R3 B", x: 829, y: 523, width: 205, height: 101, slotCount: 4, section: "winner" },
   { id: "wb-finalist", label: "Winner Finalist", x: 1601, y: 354, width: 205, height: 101, slotCount: 4, section: "winner" },
 
-  { id: "lb-drop-a", label: "LB Drop A", x: 55, y: 1142, width: 205, height: 26, slotCount: 1, section: "loser" },
-  { id: "lb-drop-b", label: "LB Drop B", x: 55, y: 1211, width: 205, height: 26, slotCount: 1, section: "loser" },
+  { id: "lb-drop-a", label: "LB Drop A", x: 55, y: 1042, width: 205, height: 26, slotCount: 1, section: "loser" },
+  { id: "lb-drop-b", label: "LB Drop B", x: 55, y: 1111, width: 205, height: 26, slotCount: 1, section: "loser" },
   { id: "lb-drop-c", label: "LB Drop C", x: 55, y: 1252, width: 205, height: 27, slotCount: 1, section: "loser" },
   { id: "lb-drop-d", label: "LB Drop D", x: 55, y: 1322, width: 205, height: 28, slotCount: 1, section: "loser" },
   { id: "lb-r2-a", label: "LB R2 A", x: 444, y: 954, width: 205, height: 52, slotCount: 2, section: "loser" },
@@ -67,18 +67,18 @@ export const MATCHES: MatchDefinition[] = [
 ];
 
 export const MATCH_HOTSPOTS: Record<string, { x: number; y: number }> = {
-  w1: { x: 292, y: 126 },
-  w2: { x: 292, y: 288 },
-  w3: { x: 292, y: 464 },
-  w4: { x: 292, y: 626 },
-  w5: { x: 692, y: 200 },
-  w6: { x: 692, y: 536 },
-  w7: { x: 1120, y: 334 },
-  l3: { x: 692, y: 1012 },
-  l4: { x: 692, y: 1205 },
-  l5: { x: 1090, y: 1154 },
-  l6: { x: 1482, y: 1084 },
-  gf: { x: 1882, y: 726 },
+  w1: { x: 312, y: 156 },
+  w2: { x: 312, y: 318 },
+  w3: { x: 312, y: 494 },
+  w4: { x: 312, y: 656 },
+  w5: { x: 692, y: 235 },
+  w6: { x: 692, y: 573 },
+  w7: { x: 1090, y: 404 },
+  l3: { x: 692, y: 1035 },
+  l4: { x: 692, y: 1245 },
+  l5: { x: 1090, y: 1140 },
+  l6: { x: 1482, y: 1060 },
+  gf: { x: 1882, y: 730 },
 };
 
 export const LOSER_PAIRINGS = [

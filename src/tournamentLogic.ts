@@ -126,7 +126,7 @@ function withAutomaticLoserPairings(state: TournamentState): TournamentState {
 
     const firstSource = sourceAssignments[0];
     for (const playerId of pairedPlayerIds) {
-      if (players[playerId]) {
+      if (players[playerId] && players[playerId].status !== "eliminated") {
         players[playerId] = { ...players[playerId], status: "active" };
       }
     }
@@ -470,7 +470,7 @@ export function applyMatchResult(
 
   for (const playerId of unchosenLoserIds) {
     const decision = payload.loserDecisions[playerId];
-    if (decision === "eliminate") {
+    if (decision === "eliminate" || !match.loserDestinationId) {
       players[playerId] = { ...players[playerId], status: "eliminated" };
       loserQueue = loserQueue.filter((queuedId) => queuedId !== playerId);
       continue;
@@ -478,28 +478,24 @@ export function applyMatchResult(
 
     players[playerId] = { ...players[playerId], status: "queued" };
 
-    if (match.loserDestinationId) {
-      const destination = nodes[match.loserDestinationId];
-      const destinationDefinition = getNodeDefinition(match.loserDestinationId);
-      const nextDestinationIds = uniqueIds([...destination.playerIds, playerId]);
+    const destination = nodes[match.loserDestinationId];
+    const destinationDefinition = getNodeDefinition(match.loserDestinationId);
+    const nextDestinationIds = uniqueIds([...destination.playerIds, playerId]);
 
-      if (nextDestinationIds.length > destinationDefinition.slotCount) {
-        return {
-          ok: false,
-          error: `${destinationDefinition.label} is full. Move players manually or choose elimination.`,
-        };
-      }
-
-      nodes[match.loserDestinationId] = {
-        ...destination,
-        playerIds: nextDestinationIds,
-        color: destination.playerIds.length === 0 ? loserNode.color : destination.color,
-        teamId: destination.teamId ?? loserNode.teamId,
+    if (nextDestinationIds.length > destinationDefinition.slotCount) {
+      return {
+        ok: false,
+        error: `${destinationDefinition.label} is full. Move players manually or choose elimination.`,
       };
-      loserQueue = loserQueue.filter((queuedId) => queuedId !== playerId);
-    } else {
-      loserQueue = uniqueIds([...loserQueue, playerId]);
     }
+
+    nodes[match.loserDestinationId] = {
+      ...destination,
+      playerIds: nextDestinationIds,
+      color: destination.playerIds.length === 0 ? loserNode.color : destination.color,
+      teamId: destination.teamId ?? loserNode.teamId,
+    };
+    loserQueue = loserQueue.filter((queuedId) => queuedId !== playerId);
   }
 
   const result: MatchResult = {
