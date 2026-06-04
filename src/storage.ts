@@ -1,14 +1,17 @@
 import { createInitialState } from "./tournamentLogic";
 import type { TournamentArchive, TournamentArchiveSummary, TournamentState } from "./types";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
 function isTournamentState(value: unknown): value is TournamentState {
   return Boolean(
-    value &&
-      typeof value === "object" &&
-      "players" in value &&
-      "teams" in value &&
-      "nodes" in value &&
-      "results" in value,
+    isRecord(value) &&
+      isRecord(value.players) &&
+      isRecord(value.teams) &&
+      isRecord(value.nodes) &&
+      isRecord(value.results),
   );
 }
 
@@ -24,6 +27,21 @@ function normalizeTournamentState(parsed: TournamentState): TournamentState {
     results: parsed.results ?? {},
     loserQueue: parsed.loserQueue ?? [],
   };
+}
+
+function isArchiveSummary(value: unknown): value is TournamentArchiveSummary {
+  return Boolean(
+    isRecord(value) &&
+      typeof value.id === "string" &&
+      typeof value.name === "string" &&
+      typeof value.createdAt === "string" &&
+      typeof value.playerCount === "number" &&
+      typeof value.resultCount === "number",
+  );
+}
+
+function isJsonResponse(res: Response): boolean {
+  return res.headers.get("content-type")?.includes("application/json") ?? false;
 }
 
 export async function loadTournamentState(): Promise<TournamentState> {
@@ -65,9 +83,9 @@ export function resetTournamentState(): TournamentState {
 export async function loadTournamentArchives(): Promise<TournamentArchiveSummary[]> {
   try {
     const res = await fetch("/api/archives");
-    if (!res.ok) return [];
+    if (!res.ok || !isJsonResponse(res)) return [];
     const data = await res.json();
-    return Array.isArray(data.archives) ? data.archives : [];
+    return Array.isArray(data.archives) ? data.archives.filter(isArchiveSummary) : [];
   } catch {
     return [];
   }
@@ -76,10 +94,10 @@ export async function loadTournamentArchives(): Promise<TournamentArchiveSummary
 export async function loadTournamentArchive(archiveId: string): Promise<TournamentArchive | null> {
   try {
     const res = await fetch(`/api/archives/${encodeURIComponent(archiveId)}`);
-    if (!res.ok) return null;
+    if (!res.ok || !isJsonResponse(res)) return null;
     const data = await res.json();
     const archive = data.archive as TournamentArchive | undefined;
-    if (!archive || !isTournamentState(archive.state)) return null;
+    if (!isArchiveSummary(archive) || !isTournamentState(archive.state)) return null;
 
     return {
       ...archive,
@@ -108,10 +126,18 @@ export async function saveTournamentArchive(
     body: JSON.stringify({ name, state }),
   });
 
+  if (!isJsonResponse(res)) {
+    throw new Error("Archive API is not available. Deploy the updated server.js too.");
+  }
+
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Could not save archive.");
   }
 
-  return data.archive as TournamentArchiveSummary;
+  if (!isArchiveSummary(data.archive)) {
+    throw new Error("Archive save response was invalid.");
+  }
+
+  return data.archive;
 }

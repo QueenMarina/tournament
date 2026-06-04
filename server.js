@@ -52,8 +52,7 @@ function isTournamentState(value) {
       isObject(value.players) &&
       isObject(value.teams) &&
       isObject(value.nodes) &&
-      isObject(value.results) &&
-      Array.isArray(value.loserQueue),
+      isObject(value.results),
   );
 }
 
@@ -218,6 +217,10 @@ const server = createServer(async (req, res) => {
     } catch {
       return json(res, 400, { error: "Invalid request" });
     }
+  }
+
+  if (pathname.startsWith("/api/")) {
+    return json(res, 404, { error: "API route not found" });
   }
 
   // --- Static file serving (React frontend) ---
