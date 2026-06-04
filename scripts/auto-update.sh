@@ -51,8 +51,13 @@ if [[ "$current_head" == "$remote_head" ]]; then
   exit 0
 fi
 
+if [[ "$merge_base" == "$remote_head" ]]; then
+  log "local branch is ahead of $upstream; no remote update to apply"
+  exit 0
+fi
+
 if [[ "$merge_base" != "$current_head" ]]; then
-  log "local branch is not a clean ancestor of $upstream; refusing to auto-update"
+  log "local branch has diverged from $upstream; refusing to auto-update"
   exit 1
 fi
 
