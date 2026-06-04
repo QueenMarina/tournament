@@ -54,8 +54,8 @@ export const MATCHES: MatchDefinition[] = [
   { id: "w2", label: "W2", sideAId: "seed-3", sideBId: "seed-4", outputNodeId: "wb-r2-b", advanceCount: 3, recruitLimit: 1, loserDestinationId: "lb-drop-b" },
   { id: "w3", label: "W3", sideAId: "seed-5", sideBId: "seed-6", outputNodeId: "wb-r2-c", advanceCount: 3, recruitLimit: 1, loserDestinationId: "lb-drop-c" },
   { id: "w4", label: "W4", sideAId: "seed-7", sideBId: "seed-8", outputNodeId: "wb-r2-d", advanceCount: 3, recruitLimit: 1, loserDestinationId: "lb-drop-d" },
-  { id: "w5", label: "W5", sideAId: "wb-r2-a", sideBId: "wb-r2-b", outputNodeId: "wb-r3-a", advanceCount: 4, recruitLimit: 1, loserDestinationId: "lb-r2-a" },
-  { id: "w6", label: "W6", sideAId: "wb-r2-c", sideBId: "wb-r2-d", outputNodeId: "wb-r3-b", advanceCount: 4, recruitLimit: 1, loserDestinationId: "lb-r2-c" },
+  { id: "w5", label: "W5", sideAId: "wb-r2-a", sideBId: "wb-r2-b", outputNodeId: "wb-r3-a", advanceCount: 4, recruitLimit: 1, loserDestinationId: "lb-r2-c" },
+  { id: "w6", label: "W6", sideAId: "wb-r2-c", sideBId: "wb-r2-d", outputNodeId: "wb-r3-b", advanceCount: 4, recruitLimit: 1, loserDestinationId: "lb-r2-a" },
   { id: "w7", label: "W7", sideAId: "wb-r3-a", sideBId: "wb-r3-b", outputNodeId: "wb-finalist", advanceCount: 4, recruitLimit: 0, loserDestinationId: "lb-r4-a" },
 
   { id: "l3", label: "L1", sideAId: "lb-r2-a", sideBId: "lb-r2-b", outputNodeId: "lb-r3-a", advanceCount: 3, recruitLimit: 1 },

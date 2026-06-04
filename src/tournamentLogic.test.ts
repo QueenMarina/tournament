@@ -72,6 +72,63 @@ describe("applyMatchResult", () => {
     expect(result.value!.players.A1.currentTeamId).toBe("team-2");
   });
 
+  it("routes w5 and w6 losers to the crossed lower-bracket round 2 nodes", () => {
+    let state = createInitialState();
+    const playerNames = [
+      "A1",
+      "A2",
+      "A3",
+      "B1",
+      "B2",
+      "B3",
+      "C1",
+      "C2",
+      "C3",
+      "D1",
+      "D2",
+      "D3",
+    ];
+
+    playerNames.forEach((name, index) => {
+      const teamNumber = Math.floor(index / 3) + 1;
+      state.players[name] = {
+        id: name,
+        username: name,
+        avatarUrl: avatar(name),
+        initialTeamId: `team-${teamNumber}`,
+        currentTeamId: `team-${teamNumber}`,
+        status: "active",
+      };
+    });
+    state.nodes["wb-r2-a"] = { ...state.nodes["wb-r2-a"], playerIds: ["A1", "A2", "A3"], teamId: "team-1" };
+    state.nodes["wb-r2-b"] = { ...state.nodes["wb-r2-b"], playerIds: ["B1", "B2", "B3"], teamId: "team-2" };
+    state.nodes["wb-r2-c"] = { ...state.nodes["wb-r2-c"], playerIds: ["C1", "C2", "C3"], teamId: "team-3" };
+    state.nodes["wb-r2-d"] = { ...state.nodes["wb-r2-d"], playerIds: ["D1", "D2", "D3"], teamId: "team-4" };
+
+    const w5 = MATCHES.find((candidate) => candidate.id === "w5")!;
+    const w5Result = applyMatchResult(state, w5, {
+      winnerSide: "a",
+      recruitedPlayerIds: ["B1"],
+      loserDecisions: { B2: "loser", B3: "loser" },
+    });
+
+    expect(w5Result.ok).toBe(true);
+    state = w5Result.value!;
+    expect(state.nodes["lb-r2-c"].playerIds).toEqual(["B2", "B3"]);
+    expect(state.nodes["lb-r2-a"].playerIds).toEqual([]);
+
+    const w6 = MATCHES.find((candidate) => candidate.id === "w6")!;
+    const w6Result = applyMatchResult(state, w6, {
+      winnerSide: "a",
+      recruitedPlayerIds: ["D1"],
+      loserDecisions: { D2: "loser", D3: "loser" },
+    });
+
+    expect(w6Result.ok).toBe(true);
+    expect(w6Result.value!.nodes["lb-r2-a"].playerIds).toEqual(["D2", "D3"]);
+    expect(w6Result.value!.nodes["lb-r2-c"].playerIds).toEqual(["B2", "B3"]);
+  });
+
   it("rejects missing unchosen defeated-player decisions", () => {
     let state = createInitialState();
     state = addPlayer(state, "Alpha", "team-1");
