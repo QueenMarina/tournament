@@ -1,12 +1,16 @@
 import {
+  Archive,
+  ArrowLeft,
   Check,
   Download,
   Edit3,
+  Eye,
   FileImage,
   Lock,
   LogOut,
   Plus,
   RotateCcw,
+  Save,
   Shield,
   Swords,
   Trash2,
@@ -24,7 +28,14 @@ import {
   MATCHES,
 } from "./bracketConfig";
 import { exportBracketImage } from "./exportBracketImage";
-import { loadTournamentState, resetTournamentState, saveTournamentState } from "./storage";
+import {
+  loadTournamentArchive,
+  loadTournamentArchives,
+  loadTournamentState,
+  resetTournamentState,
+  saveTournamentArchive,
+  saveTournamentState,
+} from "./storage";
 import {
   addPlayerToTeamNode,
   applyMatchResult,
@@ -45,6 +56,8 @@ import type {
   MatchSide,
   Player,
   Team,
+  TournamentArchive,
+  TournamentArchiveSummary,
   TournamentState,
 } from "./types";
 
@@ -74,6 +87,18 @@ function hotspotStyle(point: { x: number; y: number }): React.CSSProperties {
 
 function playerSort(a: Player, b: Player): number {
   return a.username.localeCompare(b.username, undefined, { sensitivity: "base" });
+}
+
+function formatArchiveDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function AppAvatar({ player, size = 26 }: { player: Player; size?: number }) {
@@ -381,6 +406,11 @@ function TeamsAndBackupPanel({
   setMessage,
   onOpenMatch,
   onRequestReset,
+  archiveSummaries,
+  selectedArchiveId,
+  archiveLoadingId,
+  onOpenArchive,
+  onSaveArchive,
 }: {
   state: TournamentState;
   isAdmin: boolean;
@@ -388,9 +418,16 @@ function TeamsAndBackupPanel({
   setMessage: (message: string) => void;
   onOpenMatch: (matchId: string) => void;
   onRequestReset: (mode: ResetMode) => void;
+  archiveSummaries: TournamentArchiveSummary[];
+  selectedArchiveId: string | null;
+  archiveLoadingId: string | null;
+  onOpenArchive: (archiveId: string) => void;
+  onSaveArchive: (name: string) => Promise<void>;
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [exportingImage, setExportingImage] = useState(false);
+  const [archiveName, setArchiveName] = useState("");
+  const [savingArchive, setSavingArchive] = useState(false);
   const teams = Object.values(state.teams);
 
   function exportJson() {
@@ -442,6 +479,27 @@ function TeamsAndBackupPanel({
       setMessage(error instanceof Error ? error.message : "Could not export bracket image.");
     } finally {
       setExportingImage(false);
+    }
+  }
+
+  async function saveArchive(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!isAdmin || savingArchive) return;
+    const trimmedName = archiveName.trim();
+
+    if (!trimmedName) {
+      setMessage("Enter an archive name.");
+      return;
+    }
+
+    setSavingArchive(true);
+    try {
+      await onSaveArchive(trimmedName);
+      setArchiveName("");
+    } catch {
+      // The parent reports the error through the shared toast.
+    } finally {
+      setSavingArchive(false);
     }
   }
 
@@ -560,6 +618,51 @@ function TeamsAndBackupPanel({
             })}
           </div>
         )}
+      </section>
+
+      <section className="panel-section">
+        <div className="section-title">
+          <Archive size={18} />
+          <h2>Archive</h2>
+        </div>
+        {isAdmin && (
+          <form className="archive-save-form" onSubmit={saveArchive}>
+            <input
+              value={archiveName}
+              onChange={(event) => setArchiveName(event.target.value)}
+              placeholder="Tournament name"
+              maxLength={80}
+            />
+            <button className="primary-button" type="submit" disabled={savingArchive}>
+              <Save size={16} />
+              {savingArchive ? "Saving" : "Save"}
+            </button>
+          </form>
+        )}
+        <div className="archive-list">
+          {archiveSummaries.length === 0 && <p className="empty-copy">No archived tournaments.</p>}
+          {archiveSummaries.map((archive) => {
+            const selected = archive.id === selectedArchiveId;
+            const loading = archive.id === archiveLoadingId;
+            return (
+              <button
+                className={`archive-row ${selected ? "archive-row--selected" : ""}`}
+                key={archive.id}
+                type="button"
+                onClick={() => onOpenArchive(archive.id)}
+                disabled={loading}
+              >
+                <span className="archive-row__main">
+                  <strong>{archive.name}</strong>
+                  <small>
+                    {formatArchiveDate(archive.createdAt)} - {archive.playerCount} players - {archive.resultCount} matches
+                  </small>
+                </span>
+                <Eye size={16} />
+              </button>
+            );
+          })}
+        </div>
       </section>
     </aside>
   );
@@ -998,6 +1101,9 @@ function NodeEditorModal({
 
 export function App() {
   const [state, setStateRaw] = useState<TournamentState>(() => createInitialState());
+  const [archiveSummaries, setArchiveSummaries] = useState<TournamentArchiveSummary[]>([]);
+  const [selectedArchive, setSelectedArchive] = useState<TournamentArchive | null>(null);
+  const [archiveLoadingId, setArchiveLoadingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -1009,12 +1115,62 @@ export function App() {
   const isAdminRef = useRef(isAdmin);
   isAdminRef.current = isAdmin;
 
-  useEffect(() => {
-    loadTournamentState().then((s) => {
-      setStateRaw(s);
-      setLoaded(true);
-    });
+  const openArchive = useCallback(async (archiveId: string, updateUrl = true) => {
+    setArchiveLoadingId(archiveId);
+    setActiveMatchId(null);
+    setEditingNodeId(null);
+    setResetMode(null);
+
+    try {
+      const archive = await loadTournamentArchive(archiveId);
+      if (!archive) {
+        setMessage("Archive not found.");
+        return;
+      }
+
+      setSelectedArchive(archive);
+      if (updateUrl) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("archive", archive.id);
+        window.history.pushState(null, "", url);
+      }
+    } catch {
+      setMessage("Could not load archive.");
+    } finally {
+      setArchiveLoadingId(null);
+    }
   }, []);
+
+  useEffect(() => {
+    Promise.all([loadTournamentState(), loadTournamentArchives()]).then(([s, archives]) => {
+      setStateRaw(s);
+      setArchiveSummaries(archives);
+      setLoaded(true);
+
+      const archiveId = new URLSearchParams(window.location.search).get("archive");
+      if (archiveId) {
+        openArchive(archiveId, false);
+      }
+    });
+  }, [openArchive]);
+
+  useEffect(() => {
+    function handlePopState() {
+      const archiveId = new URLSearchParams(window.location.search).get("archive");
+      if (archiveId) {
+        openArchive(archiveId, false);
+        return;
+      }
+
+      setSelectedArchive(null);
+      setActiveMatchId(null);
+      setEditingNodeId(null);
+      setResetMode(null);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [openArchive]);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
@@ -1064,6 +1220,28 @@ export function App() {
     setMessage(nextMessage);
   }
 
+  async function handleSaveArchive(name: string) {
+    try {
+      const archive = await saveTournamentArchive(name, state, adminToken);
+      setArchiveSummaries((current) => [archive, ...current.filter((candidate) => candidate.id !== archive.id)]);
+      setMessage(`${archive.name} archived.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save archive.");
+      throw error;
+    }
+  }
+
+  function showCurrentTournament() {
+    setSelectedArchive(null);
+    setActiveMatchId(null);
+    setEditingNodeId(null);
+    setResetMode(null);
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("archive");
+    window.history.pushState(null, "", url);
+  }
+
   function applyReset(mode: ResetMode) {
     setActiveMatchId(null);
     setEditingNodeId(null);
@@ -1104,9 +1282,24 @@ export function App() {
     );
   }
 
+  const visibleState = selectedArchive?.state ?? state;
+  const canEditVisibleState = isAdmin && !selectedArchive;
+
   return (
     <div className="app-shell">
       <div className="admin-bar">
+        {selectedArchive && (
+          <>
+            <span className="archive-chip">
+              <Archive size={16} />
+              <span>{selectedArchive.name}</span>
+            </span>
+            <button className="admin-button" type="button" onClick={showCurrentTournament}>
+              <ArrowLeft size={16} />
+              Current
+            </button>
+          </>
+        )}
         {isAdmin ? (
           <button className="admin-button admin-button--active" type="button" onClick={handleLogout}>
             <Shield size={16} />
@@ -1121,15 +1314,20 @@ export function App() {
         )}
       </div>
 
-      <RosterPanel state={state} isAdmin={isAdmin} setState={setState} setMessage={setMessage} />
-      <BracketBoard state={state} isAdmin={isAdmin} onOpenMatch={setActiveMatchId} onEditNode={setEditingNodeId} />
+      <RosterPanel state={visibleState} isAdmin={canEditVisibleState} setState={setState} setMessage={setMessage} />
+      <BracketBoard state={visibleState} isAdmin={canEditVisibleState} onOpenMatch={setActiveMatchId} onEditNode={setEditingNodeId} />
       <TeamsAndBackupPanel
-        state={state}
-        isAdmin={isAdmin}
+        state={visibleState}
+        isAdmin={canEditVisibleState}
         setState={setState}
         setMessage={setMessage}
         onOpenMatch={setActiveMatchId}
         onRequestReset={setResetMode}
+        archiveSummaries={archiveSummaries}
+        selectedArchiveId={selectedArchive?.id ?? null}
+        archiveLoadingId={archiveLoadingId}
+        onOpenArchive={openArchive}
+        onSaveArchive={handleSaveArchive}
       />
 
       {message && <div className="toast">{message}</div>}
@@ -1141,11 +1339,11 @@ export function App() {
           onConfirm={() => applyReset(resetMode)}
         />
       )}
-      {activeMatch && isAdmin && (
-        <MatchModal match={activeMatch} state={state} onApply={applyState} onClose={() => setActiveMatchId(null)} />
+      {activeMatch && canEditVisibleState && (
+        <MatchModal match={activeMatch} state={visibleState} onApply={applyState} onClose={() => setActiveMatchId(null)} />
       )}
-      {editingNode && isAdmin && (
-        <NodeEditorModal node={editingNode} state={state} onApply={applyState} onClose={() => setEditingNodeId(null)} />
+      {editingNode && canEditVisibleState && (
+        <NodeEditorModal node={editingNode} state={visibleState} onApply={applyState} onClose={() => setEditingNodeId(null)} />
       )}
     </div>
   );

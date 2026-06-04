@@ -65,3 +65,15 @@ export interface TournamentState {
   results: Record<string, MatchResult>;
   loserQueue: string[];
 }
+
+export interface TournamentArchiveSummary {
+  id: string;
+  name: string;
+  createdAt: string;
+  playerCount: number;
+  resultCount: number;
+}
+
+export interface TournamentArchive extends TournamentArchiveSummary {
+  state: TournamentState;
+}

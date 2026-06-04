@@ -5,3 +5,4 @@ dist/
 *.local
 tournament-data.json
 tournament-data.json
+tournament-archives.json

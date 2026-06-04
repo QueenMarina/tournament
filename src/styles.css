@@ -136,7 +136,8 @@ input[type="color"] {
 .bulk-player-form button,
 .backup-actions button,
 .modal-actions button,
-.match-row {
+.match-row,
+.archive-row {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -159,6 +160,7 @@ input[type="color"] {
 .backup-actions button:hover,
 .modal-actions button:hover,
 .match-row:hover,
+.archive-row:hover,
 .icon-button:hover {
   filter: brightness(1.12);
 }
@@ -333,6 +335,61 @@ button:disabled {
 .backup-actions button {
   min-width: 0;
   padding: 0 8px;
+}
+
+.archive-save-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.archive-save-form button {
+  min-width: 86px;
+  padding: 0 12px;
+}
+
+.archive-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.archive-row {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 54px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.archive-row__main {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.archive-row__main strong,
+.archive-row__main small,
+.archive-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-row__main strong {
+  color: #f4f8fc;
+  font-size: 13px;
+}
+
+.archive-row__main small {
+  color: #aebcca;
+  font-size: 11px;
+}
+
+.archive-row--selected {
+  border-color: rgba(106, 199, 216, 0.5);
+  background: rgba(106, 199, 216, 0.12);
 }
 
 .queue-list {
@@ -814,6 +871,29 @@ button:disabled {
   color: #adf0c1;
 }
 
+.admin-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 36px);
+}
+
+.archive-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 260px;
+  min-height: 38px;
+  border: 1px solid rgba(106, 199, 216, 0.35);
+  border-radius: 7px;
+  background: rgba(20, 27, 37, 0.92);
+  color: #d9f4fa;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 @media (max-width: 1180px) {
   .app-shell {
     grid-template-columns: 300px minmax(0, 1fr);
@@ -823,7 +903,7 @@ button:disabled {
     grid-column: 1 / -1;
     position: static;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     height: auto;
     border-left: 0;
     border-top: 1px solid rgba(255, 255, 255, 0.11);
@@ -866,6 +946,10 @@ button:disabled {
   }
 
   .backup-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .archive-save-form {
     grid-template-columns: 1fr;
   }
 }
