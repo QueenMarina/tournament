@@ -18,17 +18,6 @@ require_command() {
   fi
 }
 
-compose() {
-  if docker compose version >/dev/null 2>&1; then
-    docker compose "$@"
-  elif command -v docker-compose >/dev/null 2>&1; then
-    docker-compose "$@"
-  else
-    log "missing required command: docker compose or docker-compose"
-    exit 1
-  fi
-}
-
 require_command git
 require_command npm
 require_command docker
@@ -85,6 +74,15 @@ log "building application"
 npm run build
 
 log "restarting app service"
-compose restart app
+if [[ -n "${AUTO_UPDATE_RESTART_CONTAINER:-}" ]]; then
+  docker restart "$AUTO_UPDATE_RESTART_CONTAINER"
+elif docker compose version >/dev/null 2>&1; then
+  docker compose restart app
+elif command -v docker-compose >/dev/null 2>&1; then
+  docker-compose restart app
+else
+  log "missing required command: docker compose or docker-compose"
+  exit 1
+fi
 
 log "update complete"
